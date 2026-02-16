@@ -33,10 +33,9 @@ app.post("/api/transactions", async (req, res) => {
         if (!user_id || !title || !amount || category === undefined) {
             return res.status(400).json({ error: "Missing required fields" });
         }
-        const result = await
-          sql`INSERT INTO transactions (user_id, title, amount, category)
-          VALUES (${user_id}, ${title}, ${amount}, ${category}) 
-          RETURNING *`;
+        const result = await sql`INSERT INTO transactions (user_id, title, amount, category)
+            VALUES (${user_id}, ${title}, ${amount}, ${category}) 
+            RETURNING *`;
         res.status(201).json(result[0]);
     } catch (error) {
         console.error("Error creating transaction:", error);
@@ -50,9 +49,8 @@ app.get("/api/transactions/:user_id", async (req, res) => {
         if (!user_id) {
             return res.status(400).json({ error: "Missing user_id parameter" });
         }
-        const transactions = await
-         sql`SELECT * FROM transactions WHERE user_id = ${user_id}
-          ORDER BY created_at DESC`;
+        const transactions = await sql`SELECT * FROM transactions WHERE user_id = ${user_id}
+            ORDER BY created_at DESC`;
         res.status(200).json(transactions);
     } catch (error) {
         console.error("Error fetching transactions:", error);
@@ -66,8 +64,7 @@ app.delete("/api/transactions/:id", async (req, res) => {
         if (!id) {
             return res.status(400).json({ error: "Missing id parameter" });
         }
-       const result = 
-       await sql`DELETE FROM transactions WHERE id = ${id} RETURNING *`;
+        const result = await sql`DELETE FROM transactions WHERE id = ${id} RETURNING *`;
         if (result.length === 0) {
             return res.status(404).json({ error: "Transaction not found" });
         }
@@ -78,33 +75,35 @@ app.delete("/api/transactions/:id", async (req, res) => {
     }
 });
 
-export async function getSummaryByUserId(req, res) {
-  try {
-    const { userId } = req.params;
+app.get("/api/transactions/summary/:user_id", getSummaryByUserId);
 
-    const balanceResult = await sql`
-      SELECT COALESCE(SUM(amount), 0) as balance FROM transactions WHERE user_id = ${userId}
+async function getSummaryByUserId(req, res) {
+    try {
+        const { user_id } = req.params;
+
+        const balanceResult = await sql`
+      SELECT COALESCE(SUM(amount), 0) as balance FROM transactions WHERE user_id = ${user_id}
     `;
 
-    const incomeResult = await sql`
+        const incomeResult = await sql`
       SELECT COALESCE(SUM(amount), 0) as income FROM transactions
-      WHERE user_id = ${userId} AND amount > 0
+      WHERE user_id = ${user_id} AND amount > 0
     `;
 
-    const expensesResult = await sql`
+        const expensesResult = await sql`
       SELECT COALESCE(SUM(amount), 0) as expenses FROM transactions
-      WHERE user_id = ${userId} AND amount < 0
+      WHERE user_id = ${user_id} AND amount < 0
     `;
 
-    res.status(200).json({
-      balance: balanceResult[0].balance,
-      income: incomeResult[0].income,
-      expenses: expensesResult[0].expenses,
-    });
-  } catch (error) {
-    console.log("Error gettin the summary", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
+        res.status(200).json({
+            balance: balanceResult[0].balance,
+            income: incomeResult[0].income,
+            expenses: expensesResult[0].expenses,
+        });
+    } catch (error) {
+        console.log("Error getting the summary", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
 }
 
 initDB().then(() => {
