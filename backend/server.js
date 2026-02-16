@@ -27,14 +27,27 @@ async function initDB() {
     }
 }
 
-app.get("/", (req, res) => {
-    res.send("Hello World!");
+app.post("/api/transactions", async (req, res) => {
+    try {
+        const { user_id, title, amount, category } = req.body;
+        if (!user_id || !title || !amount || category === undefined) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
+        const result = await
+          sql`INSERT INTO transactions (user_id, title, amount, category)
+          VALUES (${user_id}, ${title}, ${amount}, ${category}) 
+          RETURNING *`;
+        res.status(201).json(result[0]);
+    } catch (error) {
+        console.error("Error creating transaction:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
 });
 
 initDB().then(() => {
     app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+        console.log(`Server is running on port ${PORT}`);
+    });
 }).catch((error) => {
     console.error("Failed to initialize the database:", error);
     process.exit(1);
