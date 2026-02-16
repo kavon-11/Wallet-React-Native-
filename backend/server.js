@@ -44,6 +44,22 @@ app.post("/api/transactions", async (req, res) => {
     }
 });
 
+app.get("/api/transactions/:user_id", async (req, res) => {
+    try {
+        const { user_id } = req.params;
+        if (!user_id) {
+            return res.status(400).json({ error: "Missing user_id parameter" });
+        }
+        const transactions = await
+         sql`SELECT * FROM transactions WHERE user_id = ${user_id}
+          ORDER BY created_at DESC`;
+        res.status(200).json(transactions);
+    } catch (error) {
+        console.error("Error fetching transactions:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 initDB().then(() => {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
